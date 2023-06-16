@@ -56,9 +56,9 @@ class Scheduler {
   }
 
   /**
-   * Return a list of shifts for an event mapped to an employee.
+   * Return a list of shifts for an event with an assigned employee
    * If the end date for a shift range is not provided, shifts are created
-   * till the end of the start date's year.
+   * until the end of the start date's year
    */
   fun buildShifts(
     startDate: String,
@@ -107,7 +107,7 @@ class Scheduler {
   }
 
   /**
-   * Given a list of shifts, returns the earliest and latest dates for those shifts
+   * Given a list of shifts, return the earliest and latest dates
    */
   fun getMinAndMaxDatesforEvent(oldShifts: MutableList<Shift>): List<LocalDate> {
     var maxDate: LocalDate = LocalDate.MIN
@@ -124,8 +124,7 @@ class Scheduler {
   }
 
   /**
-   * Updates the details of an event and saves it the modified event
-   * to the global event list
+   * Updates the details of an event and saves the modified event
    */
   fun modifyEventList(
     modifiedEvent: Event,
@@ -164,17 +163,17 @@ class Scheduler {
 
       for (newShift in newShifts) {
         //if the dates for this new shift are out of range compared to the existing shifts
-        //or if
         if (LocalDate.parse(newShift.date, dateTimeFormatter).compareTo(minDate) < 0
           || LocalDate.parse(newShift.date, dateTimeFormatter).compareTo(maxDate) > 0
         ) {
           updatedShifts.add(newShift)
         } else if (newShift.date == oldShift.date) {
+          //if the new shift replaces an old shift
           updatedShifts.add(newShift)
           replacedShift = true
         }
       }
-      //if the original event was never replaced, we must add it to the list.
+      //if the original event was never replaced, add it to the new list
       if (!replacedShift) updatedShifts.add(oldShift)
     }
     return updatedShifts
@@ -188,7 +187,6 @@ class Scheduler {
     dateFormatter: SimpleDateFormat,
     calendar: Calendar,
     numDays: Int,
-    printForRange: Boolean = true
   ) {
     var count = 0
 
@@ -198,12 +196,12 @@ class Scheduler {
     val schedule = StringBuilder()
       .append("Printing the schedule for $startDate to $endDate\n")
 
-    //toggle this when there are no events available
+    //toggle this when there are events in this date range available
     var eventsAvailableForDates = false
 
     while (count < numDays) {
       val currentDate = dateFormatter.format(calendar.getTime())
-      //toggle this when deciding to add current event
+      //toggle this when an event has shifts
       var shiftsPresent = false
 
       for (event in this.events) {
@@ -212,7 +210,7 @@ class Scheduler {
         val shifts = this.employeeSchedules.get(event.id) ?: continue
         val shiftOnThisDate = shifts.filter { shift -> shift.date == currentDate }.singleOrNull() ?: continue
 
-        //if the event date has not be added to the string
+        //if the event date has not been added to the string
         if (!shiftsPresent) {
           schedule
             .append("=".repeat(10) + " ")
@@ -247,14 +245,9 @@ class Scheduler {
       println(schedule.toString())
       return
     }
-    else if (printForRange) {
-      schedule.append("No events in schedule.")
-      println(schedule.append("\n\n").toString())
-      return
-    }
-    else{
-      println("")
-    }
+
+    schedule.append("No events in schedule.")
+    println(schedule.append("\n\n").toString())
   }
 
   /**
@@ -295,7 +288,7 @@ class Scheduler {
 
   /**
    * Modifies a time's formatting from "HH:MM"
-   * to "HH:MM:SS -$TimeZoneInUTC"
+   * to "HH:MM:SS -$TimeZoneUTCOffset"
    */
   private fun formatTime(time: String): String {
     val (startHours, startMins) = time.split(":")

@@ -5,8 +5,8 @@ class RealSchedulerApi() : SchedulerApi {
   override val scheduler = Scheduler()
 
   /**
-   * Creates and saves an event for a given employeeId
-   * Also builds shifts for an event with an employee from the start to end date for the given times
+   * 1) Creates and saves an event with a start and end time for an employee
+   * 2) Builds shifts for an event with a date range and assigns the shift to an employee
    * If no end date is provided, shifts are created until the end of the current year.
    **/
   override fun scheduleEventForEmployee(
@@ -26,6 +26,7 @@ class RealSchedulerApi() : SchedulerApi {
       startTime = startTime,
       duration = duration,
     )
+    //save the event
     scheduler.events.add(event)
 
     //increment the event id everytime this method is invoked
@@ -40,16 +41,24 @@ class RealSchedulerApi() : SchedulerApi {
       employeeId = employeeId,
       eventId = event.id
     )
+
+    //save the shifts for an event
     scheduler.employeeSchedules.put(event.id, shifts)
     return true
   }
 
   /**
-   * Can modify the details of an event with a new start and end time
-   * Overrides or adds shifts for an event
-   * If no new start time or duration are provided, the event's existing details are used
+   * Modifies the details of an event to have a new start and/or end time
+   * Overrides existing shifts or adds new ones with the event's new details
+   * If no new start time or duration are provided, the event's previous details are used
    * If no end date is provided, shifts are overrided till the end of the year
-   * This function does not handle the case of an employee being double booked for mutliple shifts.
+   *
+   * An override type of TODAY_FORWARD will override shifts for an event for the new date range
+   * An override type of TODAY_ONLY will override shifts for an event only on the new start date
+   *
+   * This API does not handle the case of an employee being double booked for mutliple shifts
+   * It also does not allow employees to be assigned to multiple shifts in one day
+   * Only one employee can be assigned at max to each day.
    */
   override fun scheduleOverrideForEvent(
     eventId: Int,
@@ -66,6 +75,7 @@ class RealSchedulerApi() : SchedulerApi {
       "This event does not exist in the system."
     }
 
+    //set the duration and start time if not provided
     val duration = newDuration ?: event.duration
     val startTime = newStartTime ?: event.startTime
 
@@ -75,6 +85,7 @@ class RealSchedulerApi() : SchedulerApi {
       duration = duration
     )
 
+    //updates details of an event
     scheduler.modifyEventList(modifiedEvent)
     val oldShifts = scheduler.employeeSchedules.get(modifiedEvent.id)!!
 
@@ -89,7 +100,11 @@ class RealSchedulerApi() : SchedulerApi {
         eventId = event.id
       )
 
+      //get the date range for the set of existing shifts
+      //this guides how new shifts should be added to the existing list
+      //also see Scheduler.modifyEventList()
       val (minDate, maxDate) = scheduler.getMinAndMaxDatesforEvent(oldShifts)
+
       //build a new list of shifts
       val updatedShifts = scheduler.modifyShiftList(
         oldShifts = oldShifts,
@@ -97,8 +112,10 @@ class RealSchedulerApi() : SchedulerApi {
         minDate = minDate,
         maxDate = maxDate
       )
+
       //save the updated shift list
       scheduler.employeeSchedules.put(eventId, updatedShifts)
+
     } else if (overrideType == TODAY_ONLY) {
 
       //set the end date to be the same as the start date for "TODAY_ONLY" events
@@ -128,7 +145,7 @@ class RealSchedulerApi() : SchedulerApi {
 
   /**
    * Given a start date and a number of days,
-   * prints the schedule for each day in the following format
+   * print the schedule for each day in the following format
    *
    * Printing the schedule for 2023-03-05 to 2023-03-11
    * ========== 2023-03-05 ==========
@@ -148,8 +165,6 @@ class RealSchedulerApi() : SchedulerApi {
     val calendar = Calendar.getInstance()
     val sdf = SimpleDateFormat("yyyy-MM-dd")
     calendar.setTime(sdf.parse(startDate))
-
-    val (year, month, date) = startDate.split("-")
 
     scheduler.printEvents(
       startDate = startDate,
